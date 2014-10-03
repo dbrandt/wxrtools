@@ -1,5 +1,5 @@
 # wxrtools
-Package for handling WordPress export format (WXR).
+Python package for handling WordPress export format (WXR).
  - Handle the broken XML WordPress produces
  - Make links to images absolute
  - Save a URL/post reference list for image download
