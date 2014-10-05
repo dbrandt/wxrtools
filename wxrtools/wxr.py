@@ -1,5 +1,21 @@
 from lxml import etree
 
+class WXRAuthor(object):
+    # User data such as names and email addesses.
+    pass
+
+class WXRBlog(object):
+    # Blog information; URLs, names, descriptions, categories, tags...
+    pass
+
+class WXREntry(object):
+    # Entry and meta data + links to image attachments.
+    pass
+
+class WXRComment(object):
+    # Comment info and spam checks.
+    pass
+
 def wxr_context(f_obj):
     return etree.iterparse(f_obj, events=('end',), tag='item')
 
