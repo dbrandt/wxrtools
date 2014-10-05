@@ -17,7 +17,7 @@ class WXRComment(object):
     pass
 
 def wxr_context(f_obj):
-    return etree.iterparse(f_obj, events=('end',), tag='item')
+    return etree.iterparse(f_obj, events=('end',), tag='item', recover=True)
 
 def fast_iter(context, func):
     # See http://www.ibm.com/developerworks/xml/library/x-hiperfparse/

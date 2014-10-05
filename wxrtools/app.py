@@ -5,7 +5,7 @@ def printer(element):
     print element
 
 def printer_app(fname):
-    f = wxr_open(fname)
-    context = wxr_context(f)
-    fast_iter(context, printer)
-    f.close()
+    with open(fname) as f:
+        context = wxr_context(f)
+        fast_iter(context, printer)
+
