@@ -1,7 +1,10 @@
-from .wxr import fast_iter, wxr_context
-from .reader import wxr_open
+from .wxr import fast_iter, wxr_context, WXRObject
+
 
 def printer(element):
+    we = WXRObject(element)
+    import pdb; pdb.set_trace()
+
     print element
 
 def printer_app(fname):

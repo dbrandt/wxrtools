@@ -1,18 +1,32 @@
 from lxml import etree
 
-class WXRAuthor(object):
+class WXRObject(object):
+    # Base functionality, like unravelling element into members
+    # named after tags.
+    def __init__(self, start_elem):
+        for e in start_elem.iterchildren():
+            if e.text and e.text.strip():
+                setattr(self, e.tag, e.text)
+            else:
+                setattr(self, e.tag, WXRObject(e))
+
+class WXRAuthor(WXRObject):
     # User data such as names and email addesses.
     pass
 
-class WXRBlog(object):
+class WXRBlog(WXRObject):
     # Blog information; URLs, names, descriptions, categories, tags...
     pass
 
-class WXREntry(object):
+class WXREntry(WXRObject):
     # Entry and meta data + links to image attachments.
     pass
 
-class WXRComment(object):
+class WXRAttachment(WXRObject):
+    # Entry and meta data + links to image attachments.
+    pass
+
+class WXRComment(WXRObject):
     # Comment info and spam checks.
     pass
 

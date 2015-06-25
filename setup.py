@@ -9,7 +9,7 @@ kwargs = {
     "author": "Daniel Brandt",
     "author_email": "me@dbrandt.se",
     "url": "http://dbrandt.se/wxrtools",
-    "scripts": [],
+    "scripts": ["bin/wxrtool.py"],
     "packages": find_packages(),
     "install_requires": [l.strip() for l in open("requirements.txt").readlines()],
 }
