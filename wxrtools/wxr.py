@@ -1,47 +1,21 @@
 from lxml import etree
 
-class WXRObject(object):
-    # Base functionality, like unravelling element into members
-    # named after tags.
-    def __init__(self, start_elem):
-        for e in start_elem.iterchildren():
-            if e.text and e.text.strip():
-                setattr(self, e.tag, e.text)
-            else:
-                setattr(self, e.tag, WXRObject(e))
 
-class WXRAuthor(WXRObject):
-    # User data such as names and email addesses.
-    pass
+def wxr_parser(f_obj):
+    return etree.iterparse(f_obj, events=("start", "end", "start-ns"), recover=True)
 
-class WXRBlog(WXRObject):
-    # Blog information; URLs, names, descriptions, categories, tags...
-    pass
-
-class WXREntry(WXRObject):
-    # Entry and meta data + links to image attachments.
-    pass
-
-class WXRAttachment(WXRObject):
-    # Entry and meta data + links to image attachments.
-    pass
-
-class WXRComment(WXRObject):
-    # Comment info and spam checks.
-    pass
-
-def wxr_context(f_obj):
-    return etree.iterparse(f_obj, events=('end',), tag='item', recover=True)
-
-def fast_iter(context, func):
+def fast_iter(parser):
     # See http://www.ibm.com/developerworks/xml/library/x-hiperfparse/
     # for more on this. This module will be subjected to huge files
     # and can't risk filling up RAM.
-    for event, elem in context:
-        func(elem)
-        elem.clear()
-        while elem.getprevious() is not None:
-            del elem.getparent()[0]
-    del context
-
-
+    for event, element in parser:
+        yield event, element
+        if event in ("start-ns", "start"):
+            continue
+        element.clear()
+        while element.getprevious() is not None:
+            try:
+                del element.getparent()[0]
+            except TypeError:
+                break
+    del parser
