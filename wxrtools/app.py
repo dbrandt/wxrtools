@@ -4,11 +4,63 @@ from collections import deque
 from .wxr import wxr_parser, fast_iter
 
 
-def printer_app(fname):
-    with open(fname) as f:
-        p = wxr_parser(f)
-        for ev, el in fast_iter(p):
-            print ev, el
+class BaseHandler(object):
+    """Base object to show what a Handler object needs to do.
+
+    The WXR data is extracted in an incremental fashion and the Handler object
+    is the reciever of the events triggered as data is encountered. This makes
+    you free to ignore certain data, save data for later processing, printing
+    it (like the included PrintHandler), push it on a queue, save it to a
+    database ... you get the idea. Do whatever suits your application.
+
+    Data fed to the handlers are always dicts, and I try to extract all I know
+    to be relevant. WordPress exports tend to include all kinds of random things
+    though, and not seldom things that break XML.
+    """
+
+    def handle_author(self, author_data):
+        """Authors may be one or more per export file, you may want to
+        collect these as they come into an array or something and not
+        just grab the first one you get (or overwrite what you already have)."""
+        pass
+
+    def handle_image(self, image_data):
+        """This image data is related to the channel, not a particular item. As
+        such, you should only get one, but you never know with WordPress exports."""
+        pass
+
+    def handle_itunes(self, itunes_data):
+        """This is not always present. It's the general data that identify a
+        RSS feed (WXR is built ontop RSS) that's valid as a podcast feed. I can't
+        see what point there is for it to be in an export file, but hey, extra
+        data."""
+        pass
+
+    def handle_blog(self, blog_data):
+        """Used to collect general blog data. It will come at the very end of
+        parsing the file since it's not technically done until then."""
+        pass
+
+    def handle_item(self, item_data):
+        """Items can be all sorts of things. Pages, media, posts, attachments,
+        drafts... It's up to you to handle them as you want (if you want). This
+        method will be called a lot. Beware that autosaved drafts might be
+        appear here. Attachments might follow a post, these are your chance to
+        catch images to download that might be present in the post.
+
+        Beware of saving these in an array for later processing. You will run
+        out of memory."""
+        pass
+
+
+class PrintHandler(BaseHandler):
+    def handle_item(self, item_data):
+        if item_data.get("status") == "publish":
+            pprint.pprint(item_data)
+            # print "title: %(title)s" % self._current_item
+            # print "link: %(link)s" % self._current_item
+            # print "pubDate: %(pubDate)s" % self._current_item
+            # print "type: %(post_type)s\n" % self._current_item
 
 
 class Extractor(object):
@@ -19,14 +71,13 @@ class Extractor(object):
     STATE_COMMENT = 5
     STATE_ATTACHMENT = 6
 
-    def __init__(self):
+    def __init__(self, handler=BaseHandler):
         self.ns_map = {}
         self.state_stack = deque()
         self.blog = {}
         self.author = None
-        self.authors = []
         self.image = {}
-        self.itunes = {}
+        self.handler = handler()
 
     @property
     def state(self):
@@ -60,6 +111,7 @@ class Extractor(object):
                     self.itunes[e.tag.replace("{%(itunes)s}" % self.ns_map, "")] = e.text
             elif e.tag == "channel":
                 self.state_stack.pop()
+                self.handler.handle_blog(self.blog)
 
 
         elif self.state == self.STATE_AUTHOR:
@@ -80,16 +132,15 @@ class Extractor(object):
             elif e.tag == "{%(wp)s}base_site_url" % self.ns_map:
                 self.blog["base_site_url"] = e.text
             elif e.tag == "{%(wp)s}author" % self.ns_map:
-                self.authors.append(self.author)
-                self.author = None
+                self.handler.handle_author(self.author)
                 self.state_stack.pop()
 
         elif self.state == self.STATE_IMAGE:
             if e.tag in ("title", "url", "link"):
                 self.image[e.tag] = e.text
             elif e.tag == "image":
+                self.handler.handle_image(self.image)
                 self.state_stack.pop()
-
 
         elif self.state == self.STATE_ITEM:
             if e.tag in ("title", "link", "pubDate", "guid", "description"):
@@ -139,23 +190,14 @@ class Extractor(object):
                     self._current_item["is_sticky"] = e.text
 
             elif e.tag == "item":
-                if self._current_item.get("status") == "publish":
-                    pprint.pprint(self._current_item)
-                    # print "title: %(title)s" % self._current_item
-                    # print "link: %(link)s" % self._current_item
-                    # print "pubDate: %(pubDate)s" % self._current_item
-                    # print "type: %(post_type)s\n" % self._current_item
-
-
-                # XXX This is where to hook up the code that actually does something
-                # with each item.
-
-                del self._current_item
+                self.handler.handle_item(self._current_item)
                 self.state_stack.pop()
 
-def exctractor_app(fname):
+
+
+def app(fname, handler=PrintHandler):
     with open(fname) as f:
-        ex = Extractor()
+        ex = Extractor(handler=handler)
         p = wxr_parser(f)
         for ev, el in fast_iter(p):
             if ev == "start-ns":
@@ -165,7 +207,4 @@ def exctractor_app(fname):
             elif ev == "end":
                 ex.feed(el)
 
-        print ex.blog
-        print ex.authors
-        print ex.image
-        print ex.itunes
+
