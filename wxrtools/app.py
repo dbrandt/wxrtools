@@ -11,7 +11,7 @@ class BaseHandler(object):
     is the reciever of the events triggered as data is encountered. This makes
     you free to ignore certain data, save data for later processing, printing
     it (like the included PrintHandler), push it on a queue, save it to a
-    database ... you get the idea. Do whatever suits your application.
+    database... you get the idea. Do whatever suits your application.
 
     Data fed to the handlers are always dicts, and I try to extract all I know
     to be relevant. WordPress exports tend to include all kinds of random things
@@ -106,13 +106,14 @@ class Extractor(object):
                 self.blog[e.tag] = e.text
             elif e.prefix == "itunes":
                 if e.tag.endswith("image"):
-                    self.itunes[e.tag.replace("{%(itunes)s}" % self.ns_map, "")] = e.get("href")
+                    self.handler.handle_itunes(
+                        {e.tag.replace("{%(itunes)s}" % self.ns_map, ""): e.get("href")})
                 else:
-                    self.itunes[e.tag.replace("{%(itunes)s}" % self.ns_map, "")] = e.text
+                    self.handler.handle_itunes(
+                        {e.tag.replace("{%(itunes)s}" % self.ns_map, ""): e.text})
             elif e.tag == "channel":
-                self.state_stack.pop()
                 self.handler.handle_blog(self.blog)
-
+                self.state_stack.pop()
 
         elif self.state == self.STATE_AUTHOR:
             if e.tag == "{%(wp)s}author_id" % self.ns_map:
@@ -206,5 +207,3 @@ def app(fname, handler=PrintHandler):
                 ex.switch_state(el)
             elif ev == "end":
                 ex.feed(el)
-
-
